@@ -145,8 +145,10 @@ def run_ui():
             <div id="result" class="output" style="display:none;">
                 <h3>Результат:</h3>
                 <div id="warnings"></div>
-                <pre id="jsonOutput"></pre>
-                <button type="button" onclick="copyResult()" style="margin-top: 10px; background: #28a745;">📋 Копировать результат</button>
+                <div style="position: relative;">
+                    <pre id="jsonOutput" style="background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 16px; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 13px; color: #24292f; position: relative;"></pre>
+                    <button id="copyBtn" type="button" onclick="copyResult()" style="position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity 0.2s; background-color: #ffffff; border: 1px solid #d0d7de; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">Copy</button>
+                </div>
             </div>
         </div>
         
@@ -192,6 +194,19 @@ def run_ui():
                 }
             });
             
+            // Hover effects for copy button
+            const jsonPre = document.getElementById('jsonOutput');
+            const copyBtn = document.getElementById('copyBtn');
+            
+            jsonPre.addEventListener('mouseenter', () => {
+                copyBtn.style.opacity = '1';
+            });
+            jsonPre.addEventListener('mouseleave', () => {
+                if (copyBtn.innerText !== 'Copied!') {
+                    copyBtn.style.opacity = '0';
+                }
+            });
+
             function copyResult() {
                 const jsonText = document.getElementById('jsonOutput').textContent;
                 if (!jsonText) {
@@ -199,7 +214,13 @@ def run_ui():
                     return;
                 }
                 navigator.clipboard.writeText(jsonText).then(() => {
-                    alert('Результат скопирован в буфер обмена!');
+                    const originalText = copyBtn.innerText;
+                    copyBtn.innerText = 'Copied!';
+                    copyBtn.style.opacity = '1';
+                    setTimeout(() => {
+                        copyBtn.innerText = originalText;
+                        copyBtn.style.opacity = '0';
+                    }, 2000);
                 }).catch(err => {
                     alert('Ошибка копирования: ' + err.message);
                 });
