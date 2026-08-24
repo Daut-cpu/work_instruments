@@ -36,7 +36,7 @@ def parse_line(line: str, line_no: int, suffix: str, date_migration: str) -> Mig
     )
 
 
-def parse_data(raw: str, suffix: str, date_migration: str) -> list[MigrationRecord]:
+def parse_data(raw: str, suffix: str, date_migration: str) -> tuple[list[MigrationRecord], list[str]]:
     records = []
     seen_keys = set()
     warnings = []
