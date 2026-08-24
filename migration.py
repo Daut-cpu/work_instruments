@@ -253,12 +253,16 @@ def run_ui():
                     else:
                         records, warnings = process_migration(raw_data, suffix, date_migration)
                         response = {'data': records, 'warnings': warnings}
+                        print(f"✅ Обработано {len(records)} записей")  # Отладка
                 except ValueError as e:
                     response = {'error': str(e)}
+                    print(f"❌ Ошибка парсинга: {e}")  # Отладка
                 except json.JSONDecodeError:
                     response = {'error': 'Некорректный JSON'}
+                    print(f"❌ Ошибка JSON: {post_data}")  # Отладка
                 except Exception as e:
                     response = {'error': f'Ошибка сервера: {str(e)}'}
+                    print(f"❌ Общая ошибка: {e}")  # Отладка
 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json; charset=utf-8')
@@ -268,7 +272,7 @@ def run_ui():
                 self.send_error(404)
 
         def log_message(self, format, *args):
-            pass  # Suppress logging
+            print(f"[HTTP] {args[0]}")  # Включить логирование для отладки
 
     def open_browser():
         webbrowser.open(f'http://localhost:{PORT}')
