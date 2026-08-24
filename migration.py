@@ -146,6 +146,7 @@ def run_ui():
                 <h3>Результат:</h3>
                 <div id="warnings"></div>
                 <pre id="jsonOutput"></pre>
+                <button type="button" onclick="copyResult()" style="margin-top: 10px; background: #28a745;">📋 Копировать результат</button>
             </div>
         </div>
         
@@ -190,6 +191,19 @@ def run_ui():
                     alert('Ошибка запроса: ' + err.message);
                 }
             });
+            
+            function copyResult() {
+                const jsonText = document.getElementById('jsonOutput').textContent;
+                if (!jsonText) {
+                    alert('Нет результата для копирования');
+                    return;
+                }
+                navigator.clipboard.writeText(jsonText).then(() => {
+                    alert('Результат скопирован в буфер обмена!');
+                }).catch(err => {
+                    alert('Ошибка копирования: ' + err.message);
+                });
+            }
         </script>
     </body>
     </html>
