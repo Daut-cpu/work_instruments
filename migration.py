@@ -250,26 +250,26 @@ def run_ui():
             path = parsed_path.path
             
             if path == '/process':
-                content_length = int(self.headers['Content-Length'])
-                post_data = self.rfile.read(content_length).decode('utf-8')
-                
                 try:
+                    content_length = int(self.headers.get('Content-Length', 0))
+                    post_data = self.rfile.read(content_length).decode('utf-8')
+                    
                     data = json.loads(post_data)
                     raw_data = data.get('raw_data', '')
                     suffix = data.get('suffix', 'S1')
                     date_migration = data.get('date', today)
 
                     if not raw_data.strip():
-                        response = {'error': 'Входные данные пустые'}
+                        response = {'error': 'Входные данные пустые', 'data': [], 'warnings': []}
                     else:
                         records, warnings = process_migration(raw_data, suffix, date_migration)
                         response = {'data': records, 'warnings': warnings}
                 except ValueError as e:
-                    response = {'error': str(e)}
+                    response = {'error': str(e), 'data': [], 'warnings': []}
                 except json.JSONDecodeError:
-                    response = {'error': 'Некорректный JSON'}
+                    response = {'error': 'Некорректный JSON', 'data': [], 'warnings': []}
                 except Exception as e:
-                    response = {'error': f'Ошибка сервера: {str(e)}'}
+                    response = {'error': f'Ошибка сервера: {str(e)}', 'data': [], 'warnings': []}
 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json; charset=utf-8')
