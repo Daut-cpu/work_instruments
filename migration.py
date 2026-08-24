@@ -94,13 +94,14 @@ DOSRE   345508
 
 
 def run_ui():
-    try:
-        from flask import Flask, request, jsonify, render_template_string
-    except ImportError:
-        sys.exit("Flask не установлен. Установите его: pip install flask")
+    import http.server
+    import socketserver
+    import urllib.parse
+    import webbrowser
+    import threading
 
-    app = Flask(__name__)
-
+    PORT = 8080
+    
     HTML_TEMPLATE = """
     <!DOCTYPE html>
     <html lang="ru">
@@ -129,7 +130,7 @@ def run_ui():
             <h1>🔄 Миграция Project Keys</h1>
             <form id="migrationForm">
                 <label for="data">Входные данные (формат: KEY ORDER_ID):</label>
-                <textarea id="data" placeholder="DOSRE   345508&#10;PROJECT 123456"></textarea>
+                <textarea id="data" placeholder="DOSRE   345508\nPROJECT 123456"></textarea>
                 <div class="hint">Каждая строка: ключ проекта и ID заказа, разделённые пробелом</div>
                 
                 <label for="suffix">Суффикс:</label>
@@ -194,29 +195,67 @@ def run_ui():
     </html>
     """
 
-    @app.route('/')
-    def index():
-        return render_template_string(HTML_TEMPLATE, today=datetime.today().strftime("%Y-%m-%d"))
+    today = datetime.today().strftime("%Y-%m-%d")
+    html_content = HTML_TEMPLATE.replace("{{ today }}", today)
 
-    @app.route('/process', methods=['POST'])
-    def process():
-        data = request.get_json()
-        raw_data = data.get('raw_data', '')
-        suffix = data.get('suffix', 'S1')
-        date_migration = data.get('date', datetime.today().strftime("%Y-%m-%d"))
+    class MigrationHandler(http.server.SimpleHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == '/':
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html; charset=utf-8')
+                self.end_headers()
+                self.wfile.write(html_content.encode('utf-8'))
+            else:
+                self.send_error(404)
 
-        if not raw_data.strip():
-            return jsonify({'error': 'Входные данные пустые'})
+        def do_POST(self):
+            if self.path == '/process':
+                content_length = int(self.headers['Content-Length'])
+                post_data = self.rfile.read(content_length).decode('utf-8')
+                
+                try:
+                    data = json.loads(post_data)
+                    raw_data = data.get('raw_data', '')
+                    suffix = data.get('suffix', 'S1')
+                    date_migration = data.get('date', today)
 
-        try:
-            records, warnings = process_migration(raw_data, suffix, date_migration)
-            return jsonify({'data': records, 'warnings': warnings})
-        except ValueError as e:
-            return jsonify({'error': str(e)})
+                    if not raw_data.strip():
+                        response = {'error': 'Входные данные пустые'}
+                    else:
+                        records, warnings = process_migration(raw_data, suffix, date_migration)
+                        response = {'data': records, 'warnings': warnings}
+                except ValueError as e:
+                    response = {'error': str(e)}
+                except json.JSONDecodeError:
+                    response = {'error': 'Некорректный JSON'}
+                except Exception as e:
+                    response = {'error': f'Ошибка сервера: {str(e)}'}
 
-    print("🌐 Запуск веб-интерфейса на http://localhost:5000")
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json; charset=utf-8')
+                self.end_headers()
+                self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+            else:
+                self.send_error(404)
+
+        def log_message(self, format, *args):
+            pass  # Suppress logging
+
+    def open_browser():
+        webbrowser.open(f'http://localhost:{PORT}')
+
+    print(f"🌐 Запуск веб-интерфейса на http://localhost:{PORT}")
     print("Нажмите Ctrl+C для остановки")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    
+    timer = threading.Timer(1.0, open_browser)
+    timer.start()
+    
+    with socketserver.TCPServer(("", PORT), MigrationHandler) as httpd:
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            print("\nОстановка сервера...")
+            timer.cancel()
 
 
 if __name__ == "__main__":
