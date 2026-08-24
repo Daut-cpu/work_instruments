@@ -258,13 +258,30 @@ def run_ui():
     def open_browser():
         webbrowser.open(f'http://localhost:{PORT}')
 
-    print(f"🌐 Запуск веб-интерфейса на http://localhost:{PORT}")
+    # Попытка найти свободный порт, если 8080 занят
+    def find_free_port(start_port):
+        port = start_port
+        while port < 65535:
+            try:
+                with socketserver.TCPServer(("", port), MigrationHandler) as test_server:
+                    return port
+            except OSError:
+                port += 1
+        raise OSError("Не удалось найти свободный порт")
+    
+    try:
+        actual_port = find_free_port(PORT)
+    except OSError as e:
+        print(f"❌ Ошибка: не удалось запустить сервер. {e}")
+        return
+    
+    print(f"🌐 Запуск веб-интерфейса на http://localhost:{actual_port}")
     print("Нажмите Ctrl+C для остановки")
     
-    timer = threading.Timer(1.0, open_browser)
+    timer = threading.Timer(1.0, lambda: webbrowser.open(f'http://localhost:{actual_port}'))
     timer.start()
     
-    with socketserver.TCPServer(("", PORT), MigrationHandler) as httpd:
+    with socketserver.TCPServer(("", actual_port), MigrationHandler) as httpd:
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
