@@ -207,6 +207,7 @@ def run_ui():
                     return;
                 }
                 navigator.clipboard.writeText(jsonText).then(() => {
+                    const copyBtn = document.getElementById('copyBtn');
                     const originalText = copyBtn.innerText;
                     copyBtn.innerText = 'Copied!';
                     setTimeout(() => {
