@@ -36,7 +36,7 @@ def parse_line(line: str, line_no: int, suffix: str, date_migration: str) -> Mig
     )
 
 
-def parse_data(raw: str, suffix: str, date_migration: str) -> tuple[list[MigrationRecord], list[str]]:
+def parse_data(raw: str, suffix: str, date_migration: str) -> list[MigrationRecord]:
     records = []
     seen_keys = set()
     warnings = []
@@ -213,10 +213,7 @@ def run_ui():
                     alert('Нет результата для копирования');
                     return;
                 }
-                // Оборачиваем JSON в тройные кавычки для форматирования кода в мессенджерах
-                const wrappedText = '```\n' + jsonText + '\n```';
-                navigator.clipboard.writeText(wrappedText).then(() => {
-                    const copyBtn = document.getElementById('copyBtn');
+                navigator.clipboard.writeText(jsonText).then(() => {
                     const originalText = copyBtn.innerText;
                     copyBtn.innerText = 'Copied!';
                     copyBtn.style.opacity = '1';
@@ -236,56 +233,45 @@ def run_ui():
     today = datetime.today().strftime("%Y-%m-%d")
     html_content = HTML_TEMPLATE.replace("{{ today }}", today)
 
-    class MigrationHandler(http.server.BaseHTTPRequestHandler):
+    class MigrationHandler(http.server.SimpleHTTPRequestHandler):
         def do_GET(self):
-            # Извлекаем путь без query параметров
-            parsed_path = urllib.parse.urlparse(self.path)
-            path = parsed_path.path
-            
-            if path == '/' or path == '' or path == '/index.html':
+            if self.path == '/':
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html; charset=utf-8')
                 self.end_headers()
                 self.wfile.write(html_content.encode('utf-8'))
-            elif path == '/favicon.ico':
-                self.send_response(204)
-                self.end_headers()
             else:
-                self.send_error(404, f"Not Found - Path: {path}")
+                self.send_error(404)
 
         def do_POST(self):
-            # Извлекаем путь без query параметров
-            parsed_path = urllib.parse.urlparse(self.path)
-            path = parsed_path.path
-            
-            if path == '/process':
+            if self.path == '/process':
+                content_length = int(self.headers['Content-Length'])
+                post_data = self.rfile.read(content_length).decode('utf-8')
+                
                 try:
-                    content_length = int(self.headers.get('Content-Length', 0))
-                    post_data = self.rfile.read(content_length).decode('utf-8')
-                    
                     data = json.loads(post_data)
                     raw_data = data.get('raw_data', '')
                     suffix = data.get('suffix', 'S1')
                     date_migration = data.get('date', today)
 
                     if not raw_data.strip():
-                        response = {'error': 'Входные данные пустые', 'data': [], 'warnings': []}
+                        response = {'error': 'Входные данные пустые'}
                     else:
                         records, warnings = process_migration(raw_data, suffix, date_migration)
                         response = {'data': records, 'warnings': warnings}
                 except ValueError as e:
-                    response = {'error': str(e), 'data': [], 'warnings': []}
+                    response = {'error': str(e)}
                 except json.JSONDecodeError:
-                    response = {'error': 'Некорректный JSON', 'data': [], 'warnings': []}
+                    response = {'error': 'Некорректный JSON'}
                 except Exception as e:
-                    response = {'error': f'Ошибка сервера: {str(e)}', 'data': [], 'warnings': []}
+                    response = {'error': f'Ошибка сервера: {str(e)}'}
 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json; charset=utf-8')
                 self.end_headers()
                 self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
             else:
-                self.send_error(404, f"Not Found - Path: {path}")
+                self.send_error(404)
 
         def log_message(self, format, *args):
             pass  # Suppress logging
