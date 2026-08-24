@@ -15,6 +15,16 @@ venv/
 .env
 .env.local
 .env.*
+node_modules/
+dist/
+build/
+target/
+.gradle/
+.mypy_cache/
+.pytest_cache/
+coverage/
+htmlcov/
+.coverage
 
 # Logs and temp files
 *.log
@@ -26,18 +36,9 @@ venv/
 .vscode/
 .idea/
 
-# Coverage and testing
-.coverage
-coverage/
-htmlcov/
-.pytest_cache/
-.mypy_cache/
-
-# Distribution artifacts
-dist/
-build/
-target/
-.gradle/
+# System files
+.DS_Store
+Thumbs.db
 
 # Compressed files
 *.zip
