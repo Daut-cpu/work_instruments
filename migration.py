@@ -207,7 +207,7 @@ def run_ui():
                     return;
                 }
                 // Оборачиваем JSON в тройные кавычки для форматирования кода в мессенджерах
-                const wrappedText = '```\\n' + jsonText + '\\n```';
+                const wrappedText = '```\n' + jsonText + '\n```';
                 navigator.clipboard.writeText(wrappedText).then(() => {
                     const copyBtn = document.getElementById('copyBtn');
                     const originalText = copyBtn.innerText;
