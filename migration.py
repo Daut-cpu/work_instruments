@@ -36,7 +36,7 @@ def parse_line(line: str, line_no: int, suffix: str, date_migration: str) -> Mig
     )
 
 
-def parse_data(raw: str, suffix: str, date_migration: str) -> list[MigrationRecord]:
+def parse_data(raw: str, suffix: str, date_migration: str) -> tuple[list[MigrationRecord], list[str]]:
     records = []
     seen_keys = set()
     warnings = []
@@ -114,15 +114,12 @@ def run_ui():
             .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
             h1 { color: #333; margin-bottom: 20px; }
             label { display: block; margin-top: 15px; font-weight: 600; color: #555; }
-            input[type="text"], input[type="date"], select, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+            input[type="text"], input[type="date"], textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
             textarea { height: 200px; font-family: monospace; }
             button { margin-top: 20px; padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
             button:hover { background: #0056b3; }
             .output { margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 4px; border: 1px solid #ddd; }
-            .code-wrapper { position: relative; margin-top: 10px; }
-            .code-wrapper pre { background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 16px; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 13px; color: #24292f; min-height: 100px; }
-            .copy-btn { position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity 0.2s; background-color: #ffffff; border: 1px solid #d0d7de; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 10; }
-            .code-wrapper:hover .copy-btn { opacity: 1; }
+            pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; overflow-x: auto; border-radius: 4px; }
             .warning { color: #856404; background: #fff3cd; padding: 10px; border-radius: 4px; margin-top: 10px; }
             .error { color: #721c24; background: #f8d7da; padding: 10px; border-radius: 4px; margin-top: 10px; }
             .hint { font-size: 12px; color: #666; margin-top: 5px; }
@@ -137,10 +134,7 @@ def run_ui():
                 <div class="hint">Каждая строка: ключ проекта и ID заказа, разделённые пробелом</div>
                 
                 <label for="suffix">Суффикс:</label>
-                <select id="suffix">
-                    <option value="S1">S1</option>
-                    <option value="D1">D1</option>
-                </select>
+                <input type="text" id="suffix" value="S1" placeholder="S1">
                 
                 <label for="date">Дата миграции:</label>
                 <input type="date" id="date" value="{{ today }}">
@@ -151,9 +145,9 @@ def run_ui():
             <div id="result" class="output" style="display:none;">
                 <h3>Результат:</h3>
                 <div id="warnings"></div>
-                <div class="code-wrapper" id="codeWrapper">
-                    <pre id="jsonOutput"></pre>
-                    <button id="copyBtn" type="button" class="copy-btn" onclick="copyResult()">Copy</button>
+                <div style="position: relative;">
+                    <pre id="jsonOutput" style="background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 16px; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 13px; color: #24292f; position: relative;"></pre>
+                    <button id="copyBtn" type="button" onclick="copyResult()" style="position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity 0.2s; background-color: #ffffff; border: 1px solid #d0d7de; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">Copy</button>
                 </div>
             </div>
         </div>
@@ -200,18 +194,35 @@ def run_ui():
                 }
             });
             
+            // Hover effects for copy button
+            const jsonPre = document.getElementById('jsonOutput');
+            const copyBtn = document.getElementById('copyBtn');
+            
+            jsonPre.addEventListener('mouseenter', () => {
+                copyBtn.style.opacity = '1';
+            });
+            jsonPre.addEventListener('mouseleave', () => {
+                if (copyBtn.innerText !== 'Copied!') {
+                    copyBtn.style.opacity = '0';
+                }
+            });
+
             function copyResult() {
                 const jsonText = document.getElementById('jsonOutput').textContent;
-                if (!jsonText || jsonText.trim() === '') {
+                if (!jsonText) {
                     alert('Нет результата для копирования');
                     return;
                 }
-                navigator.clipboard.writeText(jsonText).then(() => {
+                // Оборачиваем JSON в тройные кавычки для форматирования кода в мессенджерах
+                const wrappedText = '```\n' + jsonText + '\n```';
+                navigator.clipboard.writeText(wrappedText).then(() => {
                     const copyBtn = document.getElementById('copyBtn');
                     const originalText = copyBtn.innerText;
                     copyBtn.innerText = 'Copied!';
+                    copyBtn.style.opacity = '1';
                     setTimeout(() => {
                         copyBtn.innerText = originalText;
+                        copyBtn.style.opacity = '0';
                     }, 2000);
                 }).catch(err => {
                     alert('Ошибка копирования: ' + err.message);
@@ -225,45 +236,56 @@ def run_ui():
     today = datetime.today().strftime("%Y-%m-%d")
     html_content = HTML_TEMPLATE.replace("{{ today }}", today)
 
-    class MigrationHandler(http.server.SimpleHTTPRequestHandler):
+    class MigrationHandler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
-            if self.path == '/':
+            # Извлекаем путь без query параметров
+            parsed_path = urllib.parse.urlparse(self.path)
+            path = parsed_path.path
+            
+            if path == '/' or path == '' or path == '/index.html':
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html; charset=utf-8')
                 self.end_headers()
                 self.wfile.write(html_content.encode('utf-8'))
+            elif path == '/favicon.ico':
+                self.send_response(204)
+                self.end_headers()
             else:
-                self.send_error(404)
+                self.send_error(404, f"Not Found - Path: {path}")
 
         def do_POST(self):
-            if self.path == '/process':
-                content_length = int(self.headers['Content-Length'])
-                post_data = self.rfile.read(content_length).decode('utf-8')
-                
+            # Извлекаем путь без query параметров
+            parsed_path = urllib.parse.urlparse(self.path)
+            path = parsed_path.path
+            
+            if path == '/process':
                 try:
+                    content_length = int(self.headers.get('Content-Length', 0))
+                    post_data = self.rfile.read(content_length).decode('utf-8')
+                    
                     data = json.loads(post_data)
                     raw_data = data.get('raw_data', '')
                     suffix = data.get('suffix', 'S1')
                     date_migration = data.get('date', today)
 
                     if not raw_data.strip():
-                        response = {'error': 'Входные данные пустые'}
+                        response = {'error': 'Входные данные пустые', 'data': [], 'warnings': []}
                     else:
                         records, warnings = process_migration(raw_data, suffix, date_migration)
                         response = {'data': records, 'warnings': warnings}
                 except ValueError as e:
-                    response = {'error': str(e)}
+                    response = {'error': str(e), 'data': [], 'warnings': []}
                 except json.JSONDecodeError:
-                    response = {'error': 'Некорректный JSON'}
+                    response = {'error': 'Некорректный JSON', 'data': [], 'warnings': []}
                 except Exception as e:
-                    response = {'error': f'Ошибка сервера: {str(e)}'}
+                    response = {'error': f'Ошибка сервера: {str(e)}', 'data': [], 'warnings': []}
 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json; charset=utf-8')
                 self.end_headers()
                 self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
             else:
-                self.send_error(404)
+                self.send_error(404, f"Not Found - Path: {path}")
 
         def log_message(self, format, *args):
             pass  # Suppress logging
