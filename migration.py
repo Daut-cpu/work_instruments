@@ -229,19 +229,27 @@ def run_ui():
 
     class MigrationHandler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
-            if self.path == '/' or self.path == '':
+            # Извлекаем путь без query параметров
+            parsed_path = urllib.parse.urlparse(self.path)
+            path = parsed_path.path
+            
+            if path == '/' or path == '' or path == '/index.html':
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html; charset=utf-8')
                 self.end_headers()
                 self.wfile.write(html_content.encode('utf-8'))
-            elif self.path == '/favicon.ico':
+            elif path == '/favicon.ico':
                 self.send_response(204)
                 self.end_headers()
             else:
-                self.send_error(404, "Not Found")
+                self.send_error(404, f"Not Found - Path: {path}")
 
         def do_POST(self):
-            if self.path == '/process':
+            # Извлекаем путь без query параметров
+            parsed_path = urllib.parse.urlparse(self.path)
+            path = parsed_path.path
+            
+            if path == '/process':
                 content_length = int(self.headers['Content-Length'])
                 post_data = self.rfile.read(content_length).decode('utf-8')
                 
@@ -268,7 +276,7 @@ def run_ui():
                 self.end_headers()
                 self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
             else:
-                self.send_error(404, "Not Found")
+                self.send_error(404, f"Not Found - Path: {path}")
 
         def log_message(self, format, *args):
             pass  # Suppress logging
