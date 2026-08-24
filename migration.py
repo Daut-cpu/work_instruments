@@ -114,15 +114,12 @@ def run_ui():
             .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
             h1 { color: #333; margin-bottom: 20px; }
             label { display: block; margin-top: 15px; font-weight: 600; color: #555; }
-            input[type="text"], input[type="date"], select, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+            input[type="text"], input[type="date"], textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
             textarea { height: 200px; font-family: monospace; }
             button { margin-top: 20px; padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
             button:hover { background: #0056b3; }
             .output { margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 4px; border: 1px solid #ddd; }
-            .code-wrapper { position: relative; margin-top: 10px; }
-            .code-wrapper pre { background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 16px; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 13px; color: #24292f; min-height: 100px; }
-            .copy-btn { position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity 0.2s; background-color: #ffffff; border: 1px solid #d0d7de; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 10; }
-            .code-wrapper:hover .copy-btn { opacity: 1; }
+            pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; overflow-x: auto; border-radius: 4px; }
             .warning { color: #856404; background: #fff3cd; padding: 10px; border-radius: 4px; margin-top: 10px; }
             .error { color: #721c24; background: #f8d7da; padding: 10px; border-radius: 4px; margin-top: 10px; }
             .hint { font-size: 12px; color: #666; margin-top: 5px; }
@@ -137,10 +134,7 @@ def run_ui():
                 <div class="hint">Каждая строка: ключ проекта и ID заказа, разделённые пробелом</div>
                 
                 <label for="suffix">Суффикс:</label>
-                <select id="suffix">
-                    <option value="S1">S1</option>
-                    <option value="D1">D1</option>
-                </select>
+                <input type="text" id="suffix" value="S1" placeholder="S1">
                 
                 <label for="date">Дата миграции:</label>
                 <input type="date" id="date" value="{{ today }}">
@@ -151,9 +145,9 @@ def run_ui():
             <div id="result" class="output" style="display:none;">
                 <h3>Результат:</h3>
                 <div id="warnings"></div>
-                <div class="code-wrapper" id="codeWrapper">
-                    <pre id="jsonOutput"></pre>
-                    <button id="copyBtn" type="button" class="copy-btn" onclick="copyResult()">Copy</button>
+                <div style="position: relative;">
+                    <pre id="jsonOutput" style="background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 16px; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 13px; color: #24292f; position: relative;"></pre>
+                    <button id="copyBtn" type="button" onclick="copyResult()" style="position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity 0.2s; background-color: #ffffff; border: 1px solid #d0d7de; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">Copy</button>
                 </div>
             </div>
         </div>
@@ -200,9 +194,22 @@ def run_ui():
                 }
             });
             
+            // Hover effects for copy button
+            const jsonPre = document.getElementById('jsonOutput');
+            const copyBtn = document.getElementById('copyBtn');
+            
+            jsonPre.addEventListener('mouseenter', () => {
+                copyBtn.style.opacity = '1';
+            });
+            jsonPre.addEventListener('mouseleave', () => {
+                if (copyBtn.innerText !== 'Copied!') {
+                    copyBtn.style.opacity = '0';
+                }
+            });
+
             function copyResult() {
                 const jsonText = document.getElementById('jsonOutput').textContent;
-                if (!jsonText || jsonText.trim() === '') {
+                if (!jsonText) {
                     alert('Нет результата для копирования');
                     return;
                 }
@@ -212,8 +219,10 @@ def run_ui():
                     const copyBtn = document.getElementById('copyBtn');
                     const originalText = copyBtn.innerText;
                     copyBtn.innerText = 'Copied!';
+                    copyBtn.style.opacity = '1';
                     setTimeout(() => {
                         copyBtn.innerText = originalText;
+                        copyBtn.style.opacity = '0';
                     }, 2000);
                 }).catch(err => {
                     alert('Ошибка копирования: ' + err.message);
